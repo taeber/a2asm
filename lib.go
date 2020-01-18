@@ -44,7 +44,7 @@ func Assemble(dst io.Writer, src io.Reader) (written uint, err error) {
 				continue
 			}
 
-			s.Memory[pos] = uint8(num + (addr + 1) - (pos - 1))
+			s.Memory[pos] = uint8(addr - (pos + 1))
 		}
 	}
 
@@ -88,6 +88,7 @@ const (
 	indexedIndirect // ($12,X)
 	indirectIndex   // ($12),Y
 	indirect        // JMP ($1234)
+	implied
 )
 
 func isDigit(ch byte) bool {
@@ -391,7 +392,31 @@ TRYMORE:
 			return
 		}
 
-	case "STX": //todo
+	case "STX":
+		switch mode {
+		case absolute:
+			if num < 0xFF {
+				// Zero Page
+				s.write(0x86)
+				s.writeShort(num)
+				break
+			}
+			// Absolute
+			s.write(0x8E)
+			s.writeNumber(num)
+
+		case absoluteY:
+			if num < 0xFF {
+				s.write(0x96)
+				s.writeShort(num)
+				break
+			}
+			fallthrough
+
+		default:
+			err = fmt.Errorf("invalid mode for %s: %v", mneumonic, mode)
+			return
+		}
 	case "LDY": //todo
 	case "STY": //todo
 	case "JMP":
@@ -424,12 +449,21 @@ TRYMORE:
 		s.write(0xB0)
 	case "BNE":
 		s.write(0xD0)
-	case "BEQ":
-		s.write(0xF0)
-		s.writeShort(num - s.Address)
 		if refAdded != nil {
 			refAdded.Relative = true
+		} else {
+			num -= (s.Address + 1)
 		}
+		s.writeShort(num)
+
+	case "BEQ":
+		s.write(0xF0)
+		if refAdded != nil {
+			refAdded.Relative = true
+		} else {
+			num -= (s.Address + 1)
+		}
+		s.writeShort(num)
 
 	case "JSR":
 		if mode != absolute {
@@ -449,6 +483,11 @@ TRYMORE:
 
 func parseOperand(text []byte) (mode addressingMode, val []byte, err error) {
 	var i int
+
+	if len(text) == 0 {
+		mode = implied
+		return
+	}
 
 	if text[0] == '#' {
 		mode = immediate
@@ -524,6 +563,10 @@ func parseOperand(text []byte) (mode addressingMode, val []byte, err error) {
 }
 
 func parseOperandValue(val []byte) (num uint16, ref string, err error) {
+	if len(val) == 0 {
+		return
+	}
+
 	end := len(val)
 	for i, ch := range val {
 		if ch == '-' || ch == '+' {

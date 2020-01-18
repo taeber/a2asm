@@ -74,7 +74,7 @@ DONE  RTS
 		return
 	}
 
-	expected := []byte("\xA2\x01\xF0\x03\xCA\xF0\xFA\x60")
+	expected := []byte("\xA2\x01\xF0\x03\xCA\xF0\xF9\x60")
 	actual := out.Bytes()
 	if !bytes.Equal(expected, actual) {
 		t.Errorf("Expected %v; got %v", expected, actual)
