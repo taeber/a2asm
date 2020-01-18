@@ -230,8 +230,13 @@ func parseLine(s *state) (err error) {
 		// TODO: lo-ascii 'HI'
 		// TODO: hi-ascii "HI"
 		return
+
+	case "LST":
+		// Legal MERLIN instruction, but no affect on assembly
+		return
 	}
 
+	// Note the address of the label, if there is one.
 	if label != "" {
 		s.Labels[label] = s.Address
 	}
@@ -417,8 +422,8 @@ TRYMORE:
 			err = fmt.Errorf("invalid mode for %s: %v", mneumonic, mode)
 			return
 		}
-	case "LDY": //todo
-	case "STY": //todo
+	// case "LDY": //todo
+	// case "STY": //todo
 	case "JMP":
 		switch mode {
 		case absolute:
