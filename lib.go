@@ -52,7 +52,15 @@ func Assemble(dst io.Writer, src io.Reader) (written uint, err error) {
 		}
 	}
 
-	dst.Write(s.Memory[s.Address-s.Written : s.Address])
+	for _, chk := range s.Checkpoints {
+		var xor uint8
+		for _, b := range s.Memory[s.Origin:chk] {
+			xor ^= b
+		}
+		s.Memory[chk] = xor
+	}
+
+	dst.Write(s.Memory[s.Origin:s.Address])
 	written = uint(s.Written)
 
 	return
@@ -62,12 +70,14 @@ func Assemble(dst io.Writer, src io.Reader) (written uint, err error) {
 type address = uint16
 
 type state struct {
-	Reader     *bufio.Reader
-	Labels     map[string]address
-	Constants  map[string]uint16
-	References map[string][]*reference
+	Reader      *bufio.Reader
+	Labels      map[string]address
+	Constants   map[string]uint16
+	References  map[string][]*reference
+	Checkpoints []address
 
 	Memory  [0xFFFF]byte
+	Origin  address
 	Address address
 	Written uint16
 
@@ -213,6 +223,7 @@ func parseLine(s *state) (err error) {
 	switch mneumonic {
 	case "ORG":
 		s.Address, line, err = readNumber(line)
+		s.Origin = s.Address
 		return
 
 	case "EQU":
@@ -222,7 +233,8 @@ func parseLine(s *state) (err error) {
 		return
 
 	case "CHK":
-		// TODO: implement
+		s.Checkpoints = append(s.Checkpoints, s.Address)
+		s.write(0x00)
 		return
 
 	case "HEX":
