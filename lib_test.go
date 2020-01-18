@@ -59,6 +59,28 @@ DONE  RTS
 	}
 }
 
+func TestBranch(t *testing.T) {
+	out := bytes.NewBuffer(nil)
+	prg := strings.NewReader(`
+START LDX #1
+	  BEQ DONE
+	  DEX
+	  BEQ START
+DONE  RTS
+	`)
+	_, err := Assemble(out, prg)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	expected := []byte("\xA2\x01\xF0\x03\xCA\xF0\xFA\x60")
+	actual := out.Bytes()
+	if !bytes.Equal(expected, actual) {
+		t.Errorf("Expected %v; got %v", expected, actual)
+	}
+}
+
 func TestJSR(t *testing.T) {
 	test(t, " JSR $1234", "\x20\x34\x12")
 }

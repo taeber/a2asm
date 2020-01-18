@@ -16,7 +16,7 @@ func Assemble(dst io.Writer, src io.Reader) (written uint, err error) {
 		Reader:     bufio.NewReader(src),
 		Labels:     make(map[string]address),
 		Constants:  make(map[string]uint16),
-		References: make(map[string][]address),
+		References: make(map[string][]*reference),
 	}
 
 	for err == nil {
@@ -29,15 +29,22 @@ func Assemble(dst io.Writer, src io.Reader) (written uint, err error) {
 
 	err = nil
 
-	for ref := range s.References {
-		addr, ok := s.Labels[ref]
+	for lbl := range s.References {
+		addr, ok := s.Labels[lbl]
 		if !ok {
-			err = fmt.Errorf("unknown label: %s", ref)
+			err = fmt.Errorf("unknown label: %s", lbl)
 			return
 		}
 
-		for _, pos := range s.References[ref] {
-			binary.LittleEndian.PutUint16(s.Memory[pos:], addr)
+		for _, ref := range s.References[lbl] {
+			pos := ref.Address
+			num := binary.LittleEndian.Uint16(s.Memory[pos:])
+			if !ref.Relative {
+				binary.LittleEndian.PutUint16(s.Memory[pos:], num+addr)
+				continue
+			}
+
+			s.Memory[pos] = uint8(num + (addr + 1) - (pos - 1))
 		}
 	}
 
@@ -54,7 +61,7 @@ type state struct {
 	Reader     *bufio.Reader
 	Labels     map[string]address
 	Constants  map[string]uint16
-	References map[string][]address
+	References map[string][]*reference
 
 	Memory  [0xFFFF]byte
 	Address address
@@ -64,6 +71,11 @@ type state struct {
 	Line       []byte
 
 	Label string
+}
+
+type reference struct {
+	Address  address
+	Relative bool
 }
 
 type addressingMode uint
@@ -224,6 +236,15 @@ func parseLine(s *state) (err error) {
 	}
 
 	switch mneumonic {
+	case "DEX":
+		s.write(0xCA)
+	case "DEY":
+		s.write(0x88)
+	case "INX":
+		s.write(0xE8)
+	case "INY":
+		s.write(0xC8)
+
 	case "TAX":
 		s.write(0xAA)
 	case "TXA":
@@ -287,13 +308,16 @@ TRYMORE:
 	var ref string
 	num, ref, err = parseOperandValue(value)
 
+	var refAdded *reference
+
 	if ref != "" {
 		if def, ok := s.Constants[ref]; ok {
 			num = def
 		} else if refAddr, ok := s.Labels[ref]; ok {
 			num += refAddr
 		} else {
-			s.References[ref] = append(s.References[ref], s.Address+1)
+			refAdded = &reference{s.Address + 1, false}
+			s.References[ref] = append(s.References[ref], refAdded)
 		}
 	}
 
@@ -339,7 +363,34 @@ TRYMORE:
 		}
 
 	case "STA": //todo
-	case "LDX": //todo
+	case "LDX":
+		switch mode {
+		case immediate:
+			s.write(0xA2)
+			s.writeShort(num)
+		case absoluteY:
+			if num < 0xFF {
+				s.write(0xB6)
+				s.writeShort(num)
+				break
+			}
+			s.write(0xBE)
+			s.writeNumber(num)
+		case absolute:
+			if num < 0xFF {
+				// Zero Page
+				s.write(0xA6)
+				s.writeShort(num)
+				break
+			}
+			// Absolute
+			s.write(0xAE)
+			s.writeNumber(num)
+		default:
+			err = fmt.Errorf("invalid mode for %s: %v", mneumonic, mode)
+			return
+		}
+
 	case "STX": //todo
 	case "LDY": //todo
 	case "STY": //todo
@@ -375,6 +426,10 @@ TRYMORE:
 		s.write(0xD0)
 	case "BEQ":
 		s.write(0xF0)
+		s.writeShort(num - s.Address)
+		if refAdded != nil {
+			refAdded.Relative = true
+		}
 
 	case "JSR":
 		if mode != absolute {
