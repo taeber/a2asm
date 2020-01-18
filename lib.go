@@ -368,7 +368,97 @@ TRYMORE:
 			return
 		}
 
-	case "STA": //todo
+	case "STA":
+		switch mode {
+		case indexedIndirect:
+			s.write(0x81)
+			s.writeShort(num)
+		case indirectIndex:
+			s.write(0x91)
+			s.writeShort(num)
+		case absoluteX:
+			if num < 0xFF {
+				// Zero Page,X
+				s.write(0x95)
+				s.writeShort(num)
+				break
+			}
+			// Absolute,X
+			s.write(0x9D)
+			s.writeNumber(num)
+		case absoluteY:
+			// Absolute,Y
+			s.write(0x99)
+			s.writeNumber(num)
+		case absolute:
+			if num < 0xFF {
+				// Zero Page
+				s.write(0x85)
+				s.writeShort(num)
+				break
+			}
+			// Absolute
+			s.write(0x8D)
+			s.writeNumber(num)
+		default:
+			err = fmt.Errorf("invalid mode for %s: %v", mneumonic, mode)
+			return
+		}
+
+	case "DEC":
+		switch mode {
+		case absoluteX:
+			if num < 0xFF {
+				// Zero Page,X
+				s.write(0xD6)
+				s.writeShort(num)
+				break
+			}
+			// Absolute,X
+			s.write(0xDE)
+			s.writeNumber(num)
+		case absolute:
+			if num < 0xFF {
+				// Zero Page
+				s.write(0xC6)
+				s.writeShort(num)
+				break
+			}
+			// Absolute
+			s.write(0xCE)
+			s.writeNumber(num)
+		default:
+			err = fmt.Errorf("invalid mode for %s: %v", mneumonic, mode)
+			return
+		}
+
+	case "INC":
+		switch mode {
+		case absoluteX:
+			if num < 0xFF {
+				// Zero Page,X
+				s.write(0xF6)
+				s.writeShort(num)
+				break
+			}
+			// Absolute,X
+			s.write(0xFE)
+			s.writeNumber(num)
+		case absolute:
+			if num < 0xFF {
+				// Zero Page
+				s.write(0xE6)
+				s.writeShort(num)
+				break
+			}
+			// Absolute
+			s.write(0xEE)
+			s.writeNumber(num)
+		default:
+			err = fmt.Errorf("invalid mode for %s: %v", mneumonic, mode)
+			return
+		}
+
 	case "LDX":
 		switch mode {
 		case immediate:
@@ -436,10 +526,32 @@ TRYMORE:
 			err = fmt.Errorf("invalid mode for %s: %v", mneumonic, mode)
 			return
 		}
-	case "BIT": //todo
+
+	case "JSR":
+		if mode != absolute {
+			err = fmt.Errorf("invalid mode for %s: %v", mneumonic, mode)
+			return
+		}
+		s.write(0x20)
+		s.writeNumber(num)
+
+	// case "BIT": //todo
 
 	//todo: all Logical and arithmetic commands
+	default:
+		goto TRYBRANCH
+	}
 
+	return
+
+TRYBRANCH:
+	if refAdded != nil {
+		refAdded.Relative = true
+	} else {
+		num -= (s.Address + 2)
+	}
+
+	switch mneumonic {
 	case "BPL":
 		s.write(0x10)
 	case "BMI":
@@ -454,35 +566,15 @@ TRYMORE:
 		s.write(0xB0)
 	case "BNE":
 		s.write(0xD0)
-		if refAdded != nil {
-			refAdded.Relative = true
-		} else {
-			num -= (s.Address + 1)
-		}
-		s.writeShort(num)
-
 	case "BEQ":
 		s.write(0xF0)
-		if refAdded != nil {
-			refAdded.Relative = true
-		} else {
-			num -= (s.Address + 1)
-		}
-		s.writeShort(num)
-
-	case "JSR":
-		if mode != absolute {
-			err = fmt.Errorf("invalid mode for %s: %v", mneumonic, mode)
-			return
-		}
-		s.write(0x20)
-		s.writeNumber(num)
 
 	default:
 		err = fmt.Errorf(`unknown mneumonic: "%s"`, mneumonic)
 		return
 	}
 
+	s.writeShort(num)
 	return
 }
 
