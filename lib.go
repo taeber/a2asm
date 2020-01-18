@@ -11,6 +11,9 @@ import (
 	"io"
 )
 
+// Assemble reads MERLIN-style 6502 assembly from src and writes the
+// corresponding binary to dst. It returns how many bytes were written or if
+// an error (err) occurred.
 func Assemble(dst io.Writer, src io.Reader) (written uint, err error) {
 	s := state{
 		Reader:     bufio.NewReader(src),
@@ -24,6 +27,7 @@ func Assemble(dst io.Writer, src io.Reader) (written uint, err error) {
 	}
 
 	if err != io.EOF {
+		err = s.error(err)
 		return
 	}
 
@@ -32,7 +36,7 @@ func Assemble(dst io.Writer, src io.Reader) (written uint, err error) {
 	for lbl := range s.References {
 		addr, ok := s.Labels[lbl]
 		if !ok {
-			err = fmt.Errorf("unknown label: %s", lbl)
+			err = s.errorf("unknown label: %s", lbl)
 			return
 		}
 
@@ -213,7 +217,7 @@ func parseLine(s *state) (err error) {
 
 	case "EQU":
 		var def uint16
-		def, line, err = readNumber(line)
+		def, _, err = parseOperandValue(line)
 		s.Constants[label] = def
 		return
 
@@ -318,7 +322,7 @@ TRYMORE:
 
 	if ref != "" {
 		if def, ok := s.Constants[ref]; ok {
-			num = def
+			num += def
 		} else if refAddr, ok := s.Labels[ref]; ok {
 			num += refAddr
 		} else {
@@ -512,8 +516,61 @@ TRYMORE:
 			err = fmt.Errorf("invalid mode for %s: %v", mneumonic, mode)
 			return
 		}
-	// case "LDY": //todo
-	// case "STY": //todo
+
+	case "LDY":
+		switch mode {
+		case immediate:
+			s.write(0xA0)
+			s.writeShort(num)
+		case absoluteX:
+			if num < 0xFF {
+				s.write(0xB4)
+				s.writeShort(num)
+				break
+			}
+			s.write(0xBC)
+			s.writeNumber(num)
+		case absolute:
+			if num < 0xFF {
+				// Zero Page
+				s.write(0xA4)
+				s.writeShort(num)
+				break
+			}
+			// Absolute
+			s.write(0xAC)
+			s.writeNumber(num)
+		default:
+			err = fmt.Errorf("invalid mode for %s: %v", mneumonic, mode)
+			return
+		}
+
+	case "STY":
+		switch mode {
+		case absolute:
+			if num < 0xFF {
+				// Zero Page
+				s.write(0x84)
+				s.writeShort(num)
+				break
+			}
+			// Absolute
+			s.write(0x8C)
+			s.writeNumber(num)
+
+		case absoluteX:
+			if num < 0xFF {
+				s.write(0x94)
+				s.writeShort(num)
+				break
+			}
+			fallthrough
+
+		default:
+			err = fmt.Errorf("invalid mode for %s: %v", mneumonic, mode)
+			return
+		}
+
 	case "JMP":
 		switch mode {
 		case absolute:
@@ -666,7 +723,7 @@ func parseOperandValue(val []byte) (num uint16, ref string, err error) {
 
 	end := len(val)
 	for i, ch := range val {
-		if ch == '-' || ch == '+' {
+		if ch == '-' || ch == '+' || ch == ' ' {
 			end = i
 			break
 		}
@@ -708,6 +765,18 @@ func parseOperandValue(val []byte) (num uint16, ref string, err error) {
 	}
 
 	return
+}
+
+func (s *state) error(err error) error {
+	if err == nil {
+		return nil
+	}
+
+	return fmt.Errorf("Line %d - %s", s.LineNumber, err.Error())
+}
+
+func (s *state) errorf(format string, a ...interface{}) error {
+	return s.error(fmt.Errorf(format, a...))
 }
 
 func (s *state) write(b byte) {

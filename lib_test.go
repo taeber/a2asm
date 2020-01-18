@@ -88,9 +88,8 @@ func TestJSR(t *testing.T) {
 func TestLDA(t *testing.T) {
 	test(t, " LDA #$12", "\xA9\x12")
 	test(t, " LDA #12", "\xA9\x0C")
-	// test(t, " JSR (00FE)", "\x20\xFE\x00")
-	// test(t, " JSR 00FE", "\x20\xFE\x00")
 }
+
 func TestRTS(t *testing.T) {
 	test(t, " RTS", "\x60")
 }
@@ -169,6 +168,9 @@ func TestParseOperandValue(t *testing.T) {
 
 	num, ref, _ = parseOperandValue([]byte("BELL-1"))
 	check(0xFFFF, "BELL")
+
+	num, ref, _ = parseOperandValue([]byte("$0A  ; BUFFER PTR"))
+	check(0x0A, "")
 }
 
 func test(t *testing.T, assembly, expected string) {
