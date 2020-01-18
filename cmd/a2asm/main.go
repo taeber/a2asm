@@ -1,31 +1,38 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 
 	"github.com/taeber/a2asm"
 )
 
-var usage = `
-Apple //e Assembler
+var usage = `Apple //e Assembler
 
-Usage: a2asm <PROGRAM >PROGRAM.B
+Usage: a2asm <ASSEMBLY_FILE>
 
-Code is given a DOS 3.3 style header.
+Code is NOT given a 4-byte, DOS 3.3 style header. (ORG, LEN: uint16)
 
 Converts MERLIN-type assembly into 6502 binary.
 `
 
 func main() {
-	_, err := a2asm.Assemble(os.Stdout, os.Stdin)
-	return
-	fp, err := os.Open("/home/taeber/code/a2asm/6502progs/bell.s")
-	if err != nil {
-		log.Fatalln(err)
+	if len(os.Args) < 2 {
+		fmt.Fprint(os.Stdout, usage)
+		os.Exit(2)
 	}
-	_, err2 := a2asm.Assemble(os.Stdout, fp)
-	if err2 != nil {
-		log.Fatalln(err2)
+
+	fp := os.Stdin
+
+	if os.Args[1] != "-" {
+		var err error
+		if fp, err = os.Open(os.Args[1]); err != nil {
+			log.Fatalln(err)
+		}
+	}
+
+	if _, err := a2asm.Assemble(os.Stdout, fp); err != nil {
+		log.Fatalln(err)
 	}
 }
