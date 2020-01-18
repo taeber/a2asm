@@ -14,7 +14,7 @@ import (
 // Assemble reads MERLIN-style 6502 assembly from src and writes the
 // corresponding binary to dst. It returns how many bytes were written or if
 // an error (err) occurred.
-func Assemble(dst io.Writer, src io.Reader) (written uint, err error) {
+func Assemble(dst io.Writer, src io.Reader, headless bool) (written uint, err error) {
 	s := state{
 		Reader:     bufio.NewReader(src),
 		Labels:     make(map[string]address),
@@ -60,8 +60,20 @@ func Assemble(dst io.Writer, src io.Reader) (written uint, err error) {
 		s.Memory[chk] = xor
 	}
 
-	dst.Write(s.Memory[s.Origin:s.Address])
 	written = uint(s.Written)
+	if !headless {
+		if err = binary.Write(dst, binary.LittleEndian, s.Origin); err != nil {
+			return
+		}
+		written += 2
+
+		if err = binary.Write(dst, binary.LittleEndian, s.Written); err != nil {
+			return
+		}
+		written += 2
+	}
+
+	dst.Write(s.Memory[s.Origin:s.Address])
 
 	return
 }
@@ -162,6 +174,7 @@ func readMneumonic(line []byte) (mneumonic string, remaining []byte) {
 }
 
 func readNumber(text []byte) (uint16, []byte, error) {
+	// TODO: %binary literal
 	if text[0] == '$' {
 		// Read hex literal.
 		num, err := strconv.ParseUint(string(text[1:]), 16, 16)
@@ -326,6 +339,9 @@ TRYMORE:
 		return
 	}
 
+	// TODO: *-1 meaning current address -1
+	// TODO: >ENTRY for HI/MSB
+	// TODO: <ENTRY for LO/LSB
 	var num uint16
 	var ref string
 	num, ref, err = parseOperandValue(value)
