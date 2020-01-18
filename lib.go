@@ -342,7 +342,7 @@ TRYMORE:
 		case absoluteX:
 			if num < 0xFF {
 				// Zero Page,X
-				s.write(0xA5)
+				s.write(0xB5)
 				s.writeShort(num)
 				break
 			}
