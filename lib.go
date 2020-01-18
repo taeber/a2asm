@@ -607,6 +607,45 @@ TRYMORE:
 	// case "BIT": //todo
 
 	//todo: all Logical and arithmetic commands
+	case "ADC":
+		switch mode {
+		case immediate:
+			s.write(0x69)
+			s.writeShort(num)
+		case indexedIndirect:
+			s.write(0x61)
+			s.writeShort(num)
+		case indirectIndex:
+			s.write(0x71)
+			s.writeShort(num)
+		case absoluteX:
+			if num < 0xFF {
+				// Zero Page,X
+				s.write(0x75)
+				s.writeShort(num)
+				break
+			}
+			// Absolute,X
+			s.write(0x7D)
+			s.writeNumber(num)
+		case absoluteY:
+			// Absolute,Y
+			s.write(0x79)
+			s.writeNumber(num)
+		case absolute:
+			if num < 0xFF {
+				// Zero Page
+				s.write(0x65)
+				s.writeShort(num)
+				break
+			}
+			// Absolute
+			s.write(0x6D)
+			s.writeNumber(num)
+		default:
+			err = fmt.Errorf("invalid mode for %s: %v", mneumonic, mode)
+			return
+		}
 	default:
 		goto TRYBRANCH
 	}
