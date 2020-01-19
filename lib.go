@@ -706,6 +706,122 @@ TRYMORE:
 			return
 		}
 
+	case "ASL":
+		switch mode {
+		case implied:
+			s.write(0x0A)
+		case absoluteX:
+			if num < 0xFF {
+				// Zero Page,X
+				s.write(0x16)
+				s.writeShort(num)
+				break
+			}
+			// Absolute,X
+			s.write(0x1E)
+			s.writeNumber(num)
+		case absolute:
+			if num < 0xFF {
+				// Zero Page
+				s.write(0x06)
+				s.writeShort(num)
+				break
+			}
+			// Absolute
+			s.write(0x0E)
+			s.writeNumber(num)
+		default:
+			err = fmt.Errorf("invalid mode for %s: %v", mneumonic, mode)
+			return
+		}
+
+	case "ROL":
+		switch mode {
+		case implied:
+			s.write(0x2A)
+		case absoluteX:
+			if num < 0xFF {
+				// Zero Page,X
+				s.write(0x36)
+				s.writeShort(num)
+				break
+			}
+			// Absolute,X
+			s.write(0x3E)
+			s.writeNumber(num)
+		case absolute:
+			if num < 0xFF {
+				// Zero Page
+				s.write(0x26)
+				s.writeShort(num)
+				break
+			}
+			// Absolute
+			s.write(0x2E)
+			s.writeNumber(num)
+		default:
+			err = fmt.Errorf("invalid mode for %s: %v", mneumonic, mode)
+			return
+		}
+
+	case "LSR":
+		switch mode {
+		case implied:
+			s.write(0x4A)
+		case absoluteX:
+			if num < 0xFF {
+				// Zero Page,X
+				s.write(0x56)
+				s.writeShort(num)
+				break
+			}
+			// Absolute,X
+			s.write(0x5E)
+			s.writeNumber(num)
+		case absolute:
+			if num < 0xFF {
+				// Zero Page
+				s.write(0x46)
+				s.writeShort(num)
+				break
+			}
+			// Absolute
+			s.write(0x4E)
+			s.writeNumber(num)
+		default:
+			err = fmt.Errorf("invalid mode for %s: %v", mneumonic, mode)
+			return
+		}
+
+	case "ROR":
+		switch mode {
+		case implied:
+			s.write(0x6A)
+		case absoluteX:
+			if num < 0xFF {
+				// Zero Page,X
+				s.write(0x76)
+				s.writeShort(num)
+				break
+			}
+			// Absolute,X
+			s.write(0x7E)
+			s.writeNumber(num)
+		case absolute:
+			if num < 0xFF {
+				// Zero Page
+				s.write(0x66)
+				s.writeShort(num)
+				break
+			}
+			// Absolute
+			s.write(0x6E)
+			s.writeNumber(num)
+		default:
+			err = fmt.Errorf("invalid mode for %s: %v", mneumonic, mode)
+			return
+		}
+
 	default:
 		goto TRYBRANCH
 	}
