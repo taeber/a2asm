@@ -46,7 +46,7 @@ START LDA #$D4  "T"
 	  JMP DONE
 DONE  RTS
 	  DFB HI,8,%10000000
-	  HEX 112233
+	  HEX 112233    ; THIS IS A COMMENT
 	`)
 	expected := []byte("\xA9\xD4\x20\xED\xFD\x4C\x08\x03\x60\x80\x08\x80\x11\x22\x33")
 	_, err := Assemble(out, prg, true)

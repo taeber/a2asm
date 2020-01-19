@@ -164,9 +164,9 @@ func readMneumonic(line []byte) (mneumonic string, remaining []byte) {
 	mneumonic = strings.ToUpper(mneumonic)
 	i = i + 3
 
-	for ; i < len(line); i++ {
-		if line[i] != ' ' && line[i] != '\t' {
-			break
+	if i < len(line) {
+		if line[i] == ' ' || line[i] == '\t' {
+			i++
 		}
 	}
 
@@ -237,8 +237,15 @@ func parseLine(s *state) (err error) {
 		return
 	}
 
-	if len(s.Line) == 0 || s.Line[0] == '*' || strings.Trim(string(s.Line), "\t ") == "" {
-		// Skip empty and comment lines.
+	if len(s.Line) == 0 {
+		// Skip empty lines.
+		return
+	}
+
+	trimmed := string(s.Line)
+	trimmed = strings.Trim(trimmed, " \t")
+	if len(trimmed) == 0 || trimmed[0] == '*' || trimmed[0] == ';' {
+		// Skip comments.
 		return
 	}
 
@@ -301,7 +308,10 @@ func parseLine(s *state) (err error) {
 
 	case "HEX":
 		var num uint16
-		for i := 0; i < len(line); i += 2 {
+		for i := 0; i+1 < len(line); i += 2 {
+			if line[i] == ' ' {
+				break
+			}
 			num, _, err = readNumber(append([]byte{'$'}, line[i:i+2]...))
 			if err != nil {
 				return
@@ -1128,7 +1138,7 @@ TRYBRANCH:
 func parseOperand(text []byte) (mode addressingMode, val []byte, err error) {
 	var i int
 
-	if len(text) == 0 {
+	if len(text) == 0 || text[0] == ' ' {
 		mode = implied
 		return
 	}
