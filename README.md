@@ -23,7 +23,7 @@ Quickstart
 Tips
 ----
 
-After editing your program, you can use [AppleCommander]() and [LinApple]() to
+After editing your program, you can use [AppleCommander][] and [LinApple][] to
 test it out on an emulated Apple //e:
 
     $ edit 6502progs/hello.s
@@ -58,7 +58,7 @@ I bought _Assembly Lines_ by Roger Wagner and enjoyed using the MERLIN
 assembler on my Apple //e to start learning 6502 assembly.
 
 When I decided to try and write my own program, I found it easier to use VIM on
-my Ubuntu laptop. I found [CC65]() and their CA65 assembler with its modern ideas
+my Ubuntu laptop. I found [CC65][] and their CA65 assembler with its modern ideas
 on programming the 6502. I was soon lost in their documentation (which is
 pretty good). I eventually ended up switching to using C as it seemed like the
 easier path. However, after porting about 50% of the line-editor ed to the
