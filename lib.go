@@ -35,6 +35,20 @@ func Assemble(dst io.Writer, src io.Reader, headless bool) (written uint, err er
 	err = nil
 
 	for lbl := range s.References {
+		if lbl[0] == '>' || lbl[1] == '<' {
+			num, ok := s.Constants[lbl]
+			if !ok {
+				err = s.errorf("unknown label: %s", lbl)
+				return
+			}
+
+			for _, ref := range s.References[lbl] {
+				s.Memory[ref.Address] += uint8(num)
+			}
+
+			continue
+		}
+
 		addr, ok := s.Labels[lbl]
 		if !ok {
 			err = s.errorf("unknown label: %s", lbl)
@@ -220,7 +234,7 @@ func readNumber(text []byte) (uint16, []byte, error) {
 		return uint16(num), text[i:], err
 	}
 
-	return 0, text, fmt.Errorf("expected hex or decimal literal; got %s", text)
+	return 0, text, fmt.Errorf("expected hex, binary, or decimal literal; got %s", text)
 }
 
 func parseLine(s *state) (err error) {
@@ -257,6 +271,8 @@ func parseLine(s *state) (err error) {
 	// Note the address of the label, if there is one.
 	if label != "" {
 		s.Labels[label] = s.Address
+		s.Constants[">"+label] = (s.Address & 0xFF00) >> 8
+		s.Constants["<"+label] = s.Address & 0x00FF
 	}
 
 	var mneumonic string
@@ -404,8 +420,6 @@ TRYMORE:
 	}
 
 	// TODO: *-1 meaning current address -1
-	// TODO: >ENTRY for HI/MSB
-	// TODO: <ENTRY for LO/LSB
 	var num uint16
 	var ref string
 	num, ref, err = parseOperandValue(value)
@@ -1229,7 +1243,7 @@ func parseOperandValue(val []byte) (num uint16, ref string, err error) {
 		}
 	}
 
-	if isLetter(val[0]) {
+	if isLetter(val[0]) || val[0] == '<' || val[0] == '>' {
 		ref = string(val[0:end])
 	} else {
 		num, _, err = readNumber(val[0:end])

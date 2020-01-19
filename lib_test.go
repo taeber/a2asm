@@ -23,10 +23,12 @@ func TestPrg1(t *testing.T) {
       ORG $300
 BELL  EQU $FBDD
 *
+	  LDA #>START
 START JSR BELL
       RTS
+	  LDA #>START
 	`)
-	expected := []byte("\x20\xDD\xFB\x60")
+	expected := []byte("\xA9\x03\x20\xDD\xFB\x60\xA9\x03")
 	Assemble(out, prg, true)
 	actual := out.Bytes()
 	if !bytes.Equal(expected, actual) {
