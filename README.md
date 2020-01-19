@@ -38,6 +38,19 @@ test it out on an emulated Apple //e:
 [LinApple]: https://github.com/linappleii/linapple/
 
 
+Testing
+-------
+
+To run the unit tests, you can simply execute:
+
+    $ go test
+
+To compare against the _Assembly Lines_ programs, you'll need to extract them
+from the DSK images to the current folder then run:
+
+    $ ./compareall.bash
+
+
 Motivation
 ----------
 
