@@ -175,7 +175,6 @@ func readMneumonic(line []byte) (mneumonic string, remaining []byte) {
 }
 
 func readNumber(text []byte) (uint16, []byte, error) {
-	// TODO: %binary literal
 	if text[0] == '$' {
 		// Read hex literal.
 		num, err := strconv.ParseUint(string(text[1:]), 16, 16)
@@ -185,6 +184,23 @@ func readNumber(text []byte) (uint16, []byte, error) {
 
 		var i int
 		for i = 1; i < len(text) && isHex(text[i]); i++ {
+		}
+
+		return uint16(num), text[i:], err
+	}
+
+	if text[0] == '%' {
+		// Read binary literal.
+		num, err := strconv.ParseUint(string(text[1:]), 2, 16)
+		if err != nil {
+			return 0, text, err
+		}
+
+		var i int
+		for i = 1; i < len(text); i++ {
+			if text[i] != '0' && text[i] != '1' {
+				break
+			}
 		}
 
 		return uint16(num), text[i:], err
