@@ -25,10 +25,9 @@ BELL  EQU $FBDD
 *
 START JSR BELL
       RTS
-      CHK
 	`)
 	expected := []byte("\x20\xDD\xFB\x60")
-	Assemble(out, prg)
+	Assemble(out, prg, true)
 	actual := out.Bytes()
 	if !bytes.Equal(expected, actual) {
 		t.Errorf("Expected %v; got %v", expected, actual)
@@ -40,14 +39,17 @@ func TestPrg2(t *testing.T) {
 	prg := strings.NewReader(`
       ORG $300
 COUT  EQU $FDED
+HI    EQU $80
+LO    EQU $08
 *
 START LDA #$D4  "T"
       JSR COUT
 	  JMP DONE
 DONE  RTS
+      DFB HI,LO,HI
 	`)
-	expected := []byte("\xA9\xD4\x20\xED\xFD\x4C\x08\x03\x60")
-	_, err := Assemble(out, prg)
+	expected := []byte("\xA9\xD4\x20\xED\xFD\x4C\x08\x03\x60\x80\x08\x80")
+	_, err := Assemble(out, prg, true)
 	if err != nil {
 		t.Error(err)
 		return
@@ -68,7 +70,7 @@ START LDX #1
 	  BEQ START
 DONE  RTS
 	`)
-	_, err := Assemble(out, prg)
+	_, err := Assemble(out, prg, true)
 	if err != nil {
 		t.Error(err)
 		return
@@ -79,6 +81,11 @@ DONE  RTS
 	if !bytes.Equal(expected, actual) {
 		t.Errorf("Expected %v; got %v", expected, actual)
 	}
+}
+
+func TestDFB(t *testing.T) {
+	test(t, " DFB $12", "\x12")
+	test(t, " DFB $12,$34", "\x12\x34")
 }
 
 func TestJSR(t *testing.T) {

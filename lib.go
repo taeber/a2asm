@@ -3,6 +3,7 @@ package a2asm
 // Super simple assembler
 import (
 	"bufio"
+	"bytes"
 	"encoding/binary"
 	"fmt"
 	"strconv"
@@ -248,6 +249,33 @@ func parseLine(s *state) (err error) {
 	case "CHK":
 		s.Checkpoints = append(s.Checkpoints, s.Address)
 		s.write(0x00)
+		return
+
+	case "DFB":
+		refs := bytes.Split(line, []byte{','})
+
+		for _, txt := range refs {
+			var num uint16
+			var ref string
+			num, ref, err = parseOperandValue(txt)
+
+			if ref == "" {
+				s.writeShort(num)
+				continue
+			}
+
+			// num, line, err = readNumber([]bytes(line)
+			num, ok := s.Constants[ref]
+			if !ok {
+				num, _, err = readNumber([]byte(ref))
+				if err != nil {
+					err = fmt.Errorf("unknown constant: %s", ref)
+					return
+				}
+			}
+			s.writeShort(num)
+		}
+
 		return
 
 	case "HEX":
@@ -623,9 +651,21 @@ TRYMORE:
 		s.write(0x20)
 		s.writeNumber(num)
 
-	// case "BIT": //todo
+	case "BIT":
+		if mode != absolute {
+			err = fmt.Errorf("invalid mode for %s: %v", mneumonic, mode)
+			return
+		}
+		if num < 0xFF {
+			// Zero Page
+			s.write(0x24)
+			s.writeShort(num)
+			break
+		}
+		// Absolute
+		s.write(0x2C)
+		s.writeNumber(num)
 
-	//todo: all Logical and arithmetic commands
 	case "ADC":
 		switch mode {
 		case immediate:
@@ -666,6 +706,126 @@ TRYMORE:
 			return
 		}
 
+	case "SBC":
+		switch mode {
+		case immediate:
+			s.write(0xE9)
+			s.writeShort(num)
+		case indexedIndirect:
+			s.write(0xE1)
+			s.writeShort(num)
+		case indirectIndex:
+			s.write(0xF1)
+			s.writeShort(num)
+		case absoluteX:
+			if num < 0xFF {
+				// Zero Page,X
+				s.write(0xF5)
+				s.writeShort(num)
+				break
+			}
+			// Absolute,X
+			s.write(0xFD)
+			s.writeNumber(num)
+		case absoluteY:
+			// Absolute,Y
+			s.write(0xF9)
+			s.writeNumber(num)
+		case absolute:
+			if num < 0xFF {
+				// Zero Page
+				s.write(0xE5)
+				s.writeShort(num)
+				break
+			}
+			// Absolute
+			s.write(0xED)
+			s.writeNumber(num)
+		default:
+			err = fmt.Errorf("invalid mode for %s: %v", mneumonic, mode)
+			return
+		}
+
+	case "EOR":
+		switch mode {
+		case immediate:
+			s.write(0x49)
+			s.writeShort(num)
+		case indexedIndirect:
+			s.write(0x41)
+			s.writeShort(num)
+		case indirectIndex:
+			s.write(0x51)
+			s.writeShort(num)
+		case absoluteX:
+			if num < 0xFF {
+				// Zero Page,X
+				s.write(0x55)
+				s.writeShort(num)
+				break
+			}
+			// Absolute,X
+			s.write(0x5D)
+			s.writeNumber(num)
+		case absoluteY:
+			// Absolute,Y
+			s.write(0x59)
+			s.writeNumber(num)
+		case absolute:
+			if num < 0xFF {
+				// Zero Page
+				s.write(0x45)
+				s.writeShort(num)
+				break
+			}
+			// Absolute
+			s.write(0x4D)
+			s.writeNumber(num)
+		default:
+			err = fmt.Errorf("invalid mode for %s: %v", mneumonic, mode)
+			return
+		}
+
+	case "ORA":
+		switch mode {
+		case immediate:
+			s.write(0x09)
+			s.writeShort(num)
+		case indexedIndirect:
+			s.write(0x01)
+			s.writeShort(num)
+		case indirectIndex:
+			s.write(0x11)
+			s.writeShort(num)
+		case absoluteX:
+			if num < 0xFF {
+				// Zero Page,X
+				s.write(0x15)
+				s.writeShort(num)
+				break
+			}
+			// Absolute,X
+			s.write(0x1D)
+			s.writeNumber(num)
+		case absoluteY:
+			// Absolute,Y
+			s.write(0x19)
+			s.writeNumber(num)
+		case absolute:
+			if num < 0xFF {
+				// Zero Page
+				s.write(0x05)
+				s.writeShort(num)
+				break
+			}
+			// Absolute
+			s.write(0x0D)
+			s.writeNumber(num)
+		default:
+			err = fmt.Errorf("invalid mode for %s: %v", mneumonic, mode)
+			return
+		}
+
 	case "AND":
 		switch mode {
 		case immediate:
@@ -700,6 +860,86 @@ TRYMORE:
 			}
 			// Absolute
 			s.write(0x2D)
+			s.writeNumber(num)
+		default:
+			err = fmt.Errorf("invalid mode for %s: %v", mneumonic, mode)
+			return
+		}
+
+	case "CMP":
+		switch mode {
+		case immediate:
+			s.write(0xC9)
+			s.writeShort(num)
+		case indexedIndirect:
+			s.write(0xC1)
+			s.writeShort(num)
+		case indirectIndex:
+			s.write(0xD1)
+			s.writeShort(num)
+		case absoluteX:
+			if num < 0xFF {
+				// Zero Page,X
+				s.write(0xD5)
+				s.writeShort(num)
+				break
+			}
+			// Absolute,X
+			s.write(0xDD)
+			s.writeNumber(num)
+		case absoluteY:
+			// Absolute,Y
+			s.write(0xD9)
+			s.writeNumber(num)
+		case absolute:
+			if num < 0xFF {
+				// Zero Page
+				s.write(0xC5)
+				s.writeShort(num)
+				break
+			}
+			// Absolute
+			s.write(0xCD)
+			s.writeNumber(num)
+		default:
+			err = fmt.Errorf("invalid mode for %s: %v", mneumonic, mode)
+			return
+		}
+
+	case "CPX":
+		switch mode {
+		case immediate:
+			s.write(0xE0)
+			s.writeShort(num)
+		case absolute:
+			if num < 0xFF {
+				// Zero Page
+				s.write(0xE4)
+				s.writeShort(num)
+				break
+			}
+			// Absolute
+			s.write(0xEC)
+			s.writeNumber(num)
+		default:
+			err = fmt.Errorf("invalid mode for %s: %v", mneumonic, mode)
+			return
+		}
+
+	case "CPY":
+		switch mode {
+		case immediate:
+			s.write(0xC0)
+			s.writeShort(num)
+		case absolute:
+			if num < 0xFF {
+				// Zero Page
+				s.write(0xC4)
+				s.writeShort(num)
+				break
+			}
+			// Absolute
+			s.write(0xCC)
 			s.writeNumber(num)
 		default:
 			err = fmt.Errorf("invalid mode for %s: %v", mneumonic, mode)
