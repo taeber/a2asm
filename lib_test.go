@@ -63,6 +63,34 @@ DONE  RTS
 	}
 }
 
+func TestZeroPageRef(t *testing.T) {
+	out := bytes.NewBuffer(nil)
+	prg := strings.NewReader(`
+      ORG $300
+CSW   EQU $36
+VECT  EQU $3EA
+*
+START LDA #ENTRY
+	  STA CSW
+	  LDA #>ENTRY
+	  STA CSW+1
+	  JMP VECT
+*
+ENTRY RTS
+	`)
+	expected := []byte("\xA9\x0B\x85\x36\xA9\x03\x85\x37\x4c\xEA\x03\x60")
+	_, err := Assemble(out, prg, true)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	actual := out.Bytes()
+	if !bytes.Equal(expected, actual) {
+		t.Errorf("Expected %v; got %v", expected, actual)
+	}
+}
+
 func TestBranch(t *testing.T) {
 	out := bytes.NewBuffer(nil)
 	prg := strings.NewReader(`

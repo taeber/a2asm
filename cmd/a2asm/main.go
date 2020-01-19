@@ -35,9 +35,10 @@ func main() {
 
 	fp := os.Stdin
 
-	if flag.Arg(0) != "-" {
+	src := flag.Arg(0)
+	if src != "-" {
 		var err error
-		if fp, err = os.Open(os.Args[1]); err != nil {
+		if fp, err = os.Open(src); err != nil {
 			log.Fatalln(err)
 		}
 	}

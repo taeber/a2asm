@@ -35,7 +35,7 @@ func Assemble(dst io.Writer, src io.Reader, headless bool) (written uint, err er
 	err = nil
 
 	for lbl := range s.References {
-		if lbl[0] == '>' || lbl[1] == '<' {
+		if lbl[0] == '>' || lbl[0] == '<' {
 			num, ok := s.Constants[lbl]
 			if !ok {
 				err = s.errorf("unknown label: %s", lbl)
@@ -288,6 +288,8 @@ func parseLine(s *state) (err error) {
 		var def uint16
 		def, _, err = parseOperandValue(line)
 		s.Constants[label] = def
+		s.Constants[">"+label] = (def & 0xFF00) >> 8
+		s.Constants["<"+label] = def & 0x00FF
 		return
 
 	case "CHK":
@@ -337,9 +339,27 @@ func parseLine(s *state) (err error) {
 		return
 
 	case "ASC":
-		// TODO: implement
-		// TODO: lo-ascii 'HI'
-		// TODO: hi-ascii "HI"
+		if !(line[0] == '\'' || line[0] == '"') {
+			err = fmt.Errorf("unexpected character: %c", line[0])
+			return
+		}
+
+		var mask uint8
+		if line[0] == '"' {
+			mask = 0b1000_0000
+		}
+
+		quote := line[0]
+
+		for prev, ch := range line[1:] {
+			escaped := line[prev] == '\\'
+			if ch == quote && !escaped {
+				return
+			}
+			s.write(ch | mask)
+		}
+
+		err = fmt.Errorf("unterminated string")
 		return
 
 	case "LST":
@@ -432,6 +452,10 @@ TRYMORE:
 		} else if refAddr, ok := s.Labels[ref]; ok {
 			num += refAddr
 		} else {
+			if mode == immediate && ref[0] != '<' && ref[0] != '>' {
+				// Handle "LDA #ENTRY" as if it were "LDA #<ENTRY"
+				ref = "<" + ref
+			}
 			refAdded = &reference{s.Address + 1, false}
 			s.References[ref] = append(s.References[ref], refAdded)
 		}
@@ -450,7 +474,7 @@ TRYMORE:
 			s.write(0xB1)
 			s.writeShort(num)
 		case absoluteX:
-			if num < 0xFF {
+			if num < 0xFF && refAdded == nil {
 				// Zero Page,X
 				s.write(0xB5)
 				s.writeShort(num)
@@ -464,7 +488,7 @@ TRYMORE:
 			s.write(0xB9)
 			s.writeNumber(num)
 		case absolute:
-			if num < 0xFF {
+			if num < 0xFF && refAdded == nil {
 				// Zero Page
 				s.write(0xA5)
 				s.writeShort(num)
@@ -487,7 +511,7 @@ TRYMORE:
 			s.write(0x91)
 			s.writeShort(num)
 		case absoluteX:
-			if num < 0xFF {
+			if num < 0xFF && refAdded == nil {
 				// Zero Page,X
 				s.write(0x95)
 				s.writeShort(num)
@@ -501,7 +525,7 @@ TRYMORE:
 			s.write(0x99)
 			s.writeNumber(num)
 		case absolute:
-			if num < 0xFF {
+			if num < 0xFF && refAdded == nil {
 				// Zero Page
 				s.write(0x85)
 				s.writeShort(num)
@@ -518,7 +542,7 @@ TRYMORE:
 	case "DEC":
 		switch mode {
 		case absoluteX:
-			if num < 0xFF {
+			if num < 0xFF && refAdded == nil {
 				// Zero Page,X
 				s.write(0xD6)
 				s.writeShort(num)
@@ -528,7 +552,7 @@ TRYMORE:
 			s.write(0xDE)
 			s.writeNumber(num)
 		case absolute:
-			if num < 0xFF {
+			if num < 0xFF && refAdded == nil {
 				// Zero Page
 				s.write(0xC6)
 				s.writeShort(num)
@@ -545,7 +569,7 @@ TRYMORE:
 	case "INC":
 		switch mode {
 		case absoluteX:
-			if num < 0xFF {
+			if num < 0xFF && refAdded == nil {
 				// Zero Page,X
 				s.write(0xF6)
 				s.writeShort(num)
@@ -555,7 +579,7 @@ TRYMORE:
 			s.write(0xFE)
 			s.writeNumber(num)
 		case absolute:
-			if num < 0xFF {
+			if num < 0xFF && refAdded == nil {
 				// Zero Page
 				s.write(0xE6)
 				s.writeShort(num)
@@ -575,7 +599,7 @@ TRYMORE:
 			s.write(0xA2)
 			s.writeShort(num)
 		case absoluteY:
-			if num < 0xFF {
+			if num < 0xFF && refAdded == nil {
 				s.write(0xB6)
 				s.writeShort(num)
 				break
@@ -583,7 +607,7 @@ TRYMORE:
 			s.write(0xBE)
 			s.writeNumber(num)
 		case absolute:
-			if num < 0xFF {
+			if num < 0xFF && refAdded == nil {
 				// Zero Page
 				s.write(0xA6)
 				s.writeShort(num)
@@ -600,7 +624,7 @@ TRYMORE:
 	case "STX":
 		switch mode {
 		case absolute:
-			if num < 0xFF {
+			if num < 0xFF && refAdded == nil {
 				// Zero Page
 				s.write(0x86)
 				s.writeShort(num)
@@ -611,7 +635,7 @@ TRYMORE:
 			s.writeNumber(num)
 
 		case absoluteY:
-			if num < 0xFF {
+			if num < 0xFF && refAdded == nil {
 				s.write(0x96)
 				s.writeShort(num)
 				break
@@ -629,7 +653,7 @@ TRYMORE:
 			s.write(0xA0)
 			s.writeShort(num)
 		case absoluteX:
-			if num < 0xFF {
+			if num < 0xFF && refAdded == nil {
 				s.write(0xB4)
 				s.writeShort(num)
 				break
@@ -637,7 +661,7 @@ TRYMORE:
 			s.write(0xBC)
 			s.writeNumber(num)
 		case absolute:
-			if num < 0xFF {
+			if num < 0xFF && refAdded == nil {
 				// Zero Page
 				s.write(0xA4)
 				s.writeShort(num)
@@ -654,7 +678,7 @@ TRYMORE:
 	case "STY":
 		switch mode {
 		case absolute:
-			if num < 0xFF {
+			if num < 0xFF && refAdded == nil {
 				// Zero Page
 				s.write(0x84)
 				s.writeShort(num)
@@ -665,7 +689,7 @@ TRYMORE:
 			s.writeNumber(num)
 
 		case absoluteX:
-			if num < 0xFF {
+			if num < 0xFF && refAdded == nil {
 				s.write(0x94)
 				s.writeShort(num)
 				break
@@ -703,7 +727,7 @@ TRYMORE:
 			err = fmt.Errorf("invalid mode for %s: %v", mneumonic, mode)
 			return
 		}
-		if num < 0xFF {
+		if num < 0xFF && refAdded == nil {
 			// Zero Page
 			s.write(0x24)
 			s.writeShort(num)
@@ -725,7 +749,7 @@ TRYMORE:
 			s.write(0x71)
 			s.writeShort(num)
 		case absoluteX:
-			if num < 0xFF {
+			if num < 0xFF && refAdded == nil {
 				// Zero Page,X
 				s.write(0x75)
 				s.writeShort(num)
@@ -739,7 +763,7 @@ TRYMORE:
 			s.write(0x79)
 			s.writeNumber(num)
 		case absolute:
-			if num < 0xFF {
+			if num < 0xFF && refAdded == nil {
 				// Zero Page
 				s.write(0x65)
 				s.writeShort(num)
@@ -765,7 +789,7 @@ TRYMORE:
 			s.write(0xF1)
 			s.writeShort(num)
 		case absoluteX:
-			if num < 0xFF {
+			if num < 0xFF && refAdded == nil {
 				// Zero Page,X
 				s.write(0xF5)
 				s.writeShort(num)
@@ -779,7 +803,7 @@ TRYMORE:
 			s.write(0xF9)
 			s.writeNumber(num)
 		case absolute:
-			if num < 0xFF {
+			if num < 0xFF && refAdded == nil {
 				// Zero Page
 				s.write(0xE5)
 				s.writeShort(num)
@@ -805,7 +829,7 @@ TRYMORE:
 			s.write(0x51)
 			s.writeShort(num)
 		case absoluteX:
-			if num < 0xFF {
+			if num < 0xFF && refAdded == nil {
 				// Zero Page,X
 				s.write(0x55)
 				s.writeShort(num)
@@ -819,7 +843,7 @@ TRYMORE:
 			s.write(0x59)
 			s.writeNumber(num)
 		case absolute:
-			if num < 0xFF {
+			if num < 0xFF && refAdded == nil {
 				// Zero Page
 				s.write(0x45)
 				s.writeShort(num)
@@ -845,7 +869,7 @@ TRYMORE:
 			s.write(0x11)
 			s.writeShort(num)
 		case absoluteX:
-			if num < 0xFF {
+			if num < 0xFF && refAdded == nil {
 				// Zero Page,X
 				s.write(0x15)
 				s.writeShort(num)
@@ -859,7 +883,7 @@ TRYMORE:
 			s.write(0x19)
 			s.writeNumber(num)
 		case absolute:
-			if num < 0xFF {
+			if num < 0xFF && refAdded == nil {
 				// Zero Page
 				s.write(0x05)
 				s.writeShort(num)
@@ -885,7 +909,7 @@ TRYMORE:
 			s.write(0x31)
 			s.writeShort(num)
 		case absoluteX:
-			if num < 0xFF {
+			if num < 0xFF && refAdded == nil {
 				// Zero Page,X
 				s.write(0x35)
 				s.writeShort(num)
@@ -899,7 +923,7 @@ TRYMORE:
 			s.write(0x39)
 			s.writeNumber(num)
 		case absolute:
-			if num < 0xFF {
+			if num < 0xFF && refAdded == nil {
 				// Zero Page
 				s.write(0x25)
 				s.writeShort(num)
@@ -925,7 +949,7 @@ TRYMORE:
 			s.write(0xD1)
 			s.writeShort(num)
 		case absoluteX:
-			if num < 0xFF {
+			if num < 0xFF && refAdded == nil {
 				// Zero Page,X
 				s.write(0xD5)
 				s.writeShort(num)
@@ -939,7 +963,7 @@ TRYMORE:
 			s.write(0xD9)
 			s.writeNumber(num)
 		case absolute:
-			if num < 0xFF {
+			if num < 0xFF && refAdded == nil {
 				// Zero Page
 				s.write(0xC5)
 				s.writeShort(num)
@@ -959,7 +983,7 @@ TRYMORE:
 			s.write(0xE0)
 			s.writeShort(num)
 		case absolute:
-			if num < 0xFF {
+			if num < 0xFF && refAdded == nil {
 				// Zero Page
 				s.write(0xE4)
 				s.writeShort(num)
@@ -979,7 +1003,7 @@ TRYMORE:
 			s.write(0xC0)
 			s.writeShort(num)
 		case absolute:
-			if num < 0xFF {
+			if num < 0xFF && refAdded == nil {
 				// Zero Page
 				s.write(0xC4)
 				s.writeShort(num)
@@ -998,7 +1022,7 @@ TRYMORE:
 		case implied:
 			s.write(0x0A)
 		case absoluteX:
-			if num < 0xFF {
+			if num < 0xFF && refAdded == nil {
 				// Zero Page,X
 				s.write(0x16)
 				s.writeShort(num)
@@ -1008,7 +1032,7 @@ TRYMORE:
 			s.write(0x1E)
 			s.writeNumber(num)
 		case absolute:
-			if num < 0xFF {
+			if num < 0xFF && refAdded == nil {
 				// Zero Page
 				s.write(0x06)
 				s.writeShort(num)
@@ -1027,7 +1051,7 @@ TRYMORE:
 		case implied:
 			s.write(0x2A)
 		case absoluteX:
-			if num < 0xFF {
+			if num < 0xFF && refAdded == nil {
 				// Zero Page,X
 				s.write(0x36)
 				s.writeShort(num)
@@ -1037,7 +1061,7 @@ TRYMORE:
 			s.write(0x3E)
 			s.writeNumber(num)
 		case absolute:
-			if num < 0xFF {
+			if num < 0xFF && refAdded == nil {
 				// Zero Page
 				s.write(0x26)
 				s.writeShort(num)
@@ -1056,7 +1080,7 @@ TRYMORE:
 		case implied:
 			s.write(0x4A)
 		case absoluteX:
-			if num < 0xFF {
+			if num < 0xFF && refAdded == nil {
 				// Zero Page,X
 				s.write(0x56)
 				s.writeShort(num)
@@ -1066,7 +1090,7 @@ TRYMORE:
 			s.write(0x5E)
 			s.writeNumber(num)
 		case absolute:
-			if num < 0xFF {
+			if num < 0xFF && refAdded == nil {
 				// Zero Page
 				s.write(0x46)
 				s.writeShort(num)
@@ -1085,7 +1109,7 @@ TRYMORE:
 		case implied:
 			s.write(0x6A)
 		case absoluteX:
-			if num < 0xFF {
+			if num < 0xFF && refAdded == nil {
 				// Zero Page,X
 				s.write(0x76)
 				s.writeShort(num)
@@ -1095,7 +1119,7 @@ TRYMORE:
 			s.write(0x7E)
 			s.writeNumber(num)
 		case absolute:
-			if num < 0xFF {
+			if num < 0xFF && refAdded == nil {
 				// Zero Page
 				s.write(0x66)
 				s.writeShort(num)
