@@ -662,6 +662,47 @@ TRYMORE:
 			err = fmt.Errorf("invalid mode for %s: %v", mneumonic, mode)
 			return
 		}
+
+	case "AND":
+		switch mode {
+		case immediate:
+			s.write(0x29)
+			s.writeShort(num)
+		case indexedIndirect:
+			s.write(0x21)
+			s.writeShort(num)
+		case indirectIndex:
+			s.write(0x31)
+			s.writeShort(num)
+		case absoluteX:
+			if num < 0xFF {
+				// Zero Page,X
+				s.write(0x35)
+				s.writeShort(num)
+				break
+			}
+			// Absolute,X
+			s.write(0x3D)
+			s.writeNumber(num)
+		case absoluteY:
+			// Absolute,Y
+			s.write(0x39)
+			s.writeNumber(num)
+		case absolute:
+			if num < 0xFF {
+				// Zero Page
+				s.write(0x25)
+				s.writeShort(num)
+				break
+			}
+			// Absolute
+			s.write(0x2D)
+			s.writeNumber(num)
+		default:
+			err = fmt.Errorf("invalid mode for %s: %v", mneumonic, mode)
+			return
+		}
+
 	default:
 		goto TRYBRANCH
 	}
