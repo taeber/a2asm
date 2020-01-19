@@ -270,6 +270,9 @@ func parseLine(s *state) (err error) {
 		s.Labels[label] = s.Address
 	}
 
+	// TODO: Consider using two lookup tables (opcode, lengths) instead.
+	//  opcode $F2 = Invalid mode
+	//  opcode $02 = Ambiguous; could be Absolute or Zero Page
 	switch mneumonic {
 	case "DEX":
 		s.write(0xCA)
