@@ -295,7 +295,14 @@ func parseLine(s *state) (err error) {
 		return
 
 	case "HEX":
-		// TODO: implement
+		var num uint16
+		for i := 0; i < len(line); i += 2 {
+			num, _, err = readNumber(append([]byte{'$'}, line[i:i+2]...))
+			if err != nil {
+				return
+			}
+			s.writeShort(num)
+		}
 		return
 
 	case "ASC":

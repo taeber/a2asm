@@ -40,15 +40,15 @@ func TestPrg2(t *testing.T) {
       ORG $300
 COUT  EQU $FDED
 HI    EQU $80
-LO    EQU $08
 *
 START LDA #$D4  "T"
       JSR COUT
 	  JMP DONE
 DONE  RTS
-      DFB HI,LO,HI
+	  DFB HI,8,%10000000
+	  HEX 112233
 	`)
-	expected := []byte("\xA9\xD4\x20\xED\xFD\x4C\x08\x03\x60\x80\x08\x80")
+	expected := []byte("\xA9\xD4\x20\xED\xFD\x4C\x08\x03\x60\x80\x08\x80\x11\x22\x33")
 	_, err := Assemble(out, prg, true)
 	if err != nil {
 		t.Error(err)
