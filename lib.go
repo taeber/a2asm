@@ -247,6 +247,11 @@ func parseLine(s *state) (err error) {
 	var label string
 	label, line = readLabel(line)
 
+	// Note the address of the label, if there is one.
+	if label != "" {
+		s.Labels[label] = s.Address
+	}
+
 	var mneumonic string
 	mneumonic, line = readMneumonic(line)
 
@@ -314,11 +319,6 @@ func parseLine(s *state) (err error) {
 	case "LST":
 		// Legal MERLIN instruction, but no affect on assembly
 		return
-	}
-
-	// Note the address of the label, if there is one.
-	if label != "" {
-		s.Labels[label] = s.Address
 	}
 
 	// TODO: Consider using two lookup tables (opcode, lengths) instead.
