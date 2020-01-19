@@ -71,5 +71,5 @@ So, I wrote this assembler. I wrote tests to ensure every program of Roger
 Wagner assembles correctly. I have not added any more features, so while it
 uses MERLIN-style syntax, it is not 100% MERLIN compatible.
 
-[CC65](https://cc65.github.io/)
+[CC65]: https://cc65.github.io/
 
