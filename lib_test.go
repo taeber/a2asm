@@ -232,6 +232,29 @@ START LDX #1
 	}
 }
 
+func TestASCII(t *testing.T) {
+	out := bytes.NewBuffer(nil)
+	prg := strings.NewReader(`
+START LDX #'T'
+	  BEQ EXIT
+	  DEX
+	  BEQ START
+EXIT  RTS
+      LDX #"T"
+	`)
+	_, err := Assemble(out, prg, true)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	expected := []byte("\xA2\x54\xF0\x03\xCA\xF0\xF9\x60\xA2\xD4")
+	actual := out.Bytes()
+	if !bytes.Equal(expected, actual) {
+		t.Errorf("Expected %v; got %v", expected, actual)
+	}
+}
+
 func test(t *testing.T, assembly, expected string) {
 	s := state{
 		Reader: bufio.NewReader(strings.NewReader(assembly)),

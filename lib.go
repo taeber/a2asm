@@ -12,6 +12,8 @@ import (
 	"io"
 )
 
+const highASCII = 0b1000_0000
+
 // Assemble reads MERLIN-style 6502 assembly from src and writes the
 // corresponding binary to dst. It returns how many bytes were written or if
 // an error (err) occurred.
@@ -235,6 +237,18 @@ func readNumber(text []byte) (uint16, []byte, error) {
 		return uint16(num), text[i:], err
 	}
 
+	if len(text) >= 3 {
+		// ASCII character
+		if text[0] == '\'' && text[2] == '\'' {
+			// low-ASCII (high-bit off)
+			return uint16(text[1]), text[3:], nil
+		}
+		if text[0] == '"' && text[2] == '"' {
+			// high-ASCII (high-bit on
+			return uint16(text[1] | highASCII), text[3:], nil
+		}
+	}
+
 	return 0, text, fmt.Errorf("expected hex, binary, or decimal literal; got %s", text)
 }
 
@@ -273,10 +287,9 @@ func parseLine(s *state) (err error) {
 	if label != "" {
 		if label[0] != '.' && label[0] != ':' {
 			s.CurrentLabel = label
-			s.errorf("DEBUG - Setting Current Label %s", s.CurrentLabel)
 		} else {
+			// Local Label
 			label = s.CurrentLabel + label
-			s.errorf("DEBUG - Making local label %s", label)
 		}
 		s.Labels[label] = s.Address
 		s.Constants[">"+label] = (s.Address & 0xFF00) >> 8
@@ -354,7 +367,7 @@ func parseLine(s *state) (err error) {
 
 		var mask uint8
 		if line[0] == '"' {
-			mask = 0b1000_0000
+			mask = highASCII
 		}
 
 		quote := line[0]
@@ -458,7 +471,6 @@ TRYMORE:
 		if ref[0] == '.' || ref[0] == ':' {
 			// Local label
 			ref = s.CurrentLabel + ref
-			s.errorf("DEBUG - found local label reference: %s", ref)
 		}
 
 		if def, ok := s.Constants[ref]; ok {
