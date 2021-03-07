@@ -97,11 +97,12 @@ func Assemble(dst io.Writer, src io.Reader, headless bool) (written uint, err er
 type address = uint16
 
 type state struct {
-	Reader      *bufio.Reader
-	Labels      map[string]address
-	Constants   map[string]uint16
-	References  map[string][]*reference
-	Checkpoints []address
+	Reader       *bufio.Reader
+	Labels       map[string]address
+	CurrentLabel string
+	Constants    map[string]uint16
+	References   map[string][]*reference
+	Checkpoints  []address
 
 	Memory  [0xFFFF]byte
 	Origin  address
@@ -270,6 +271,13 @@ func parseLine(s *state) (err error) {
 
 	// Note the address of the label, if there is one.
 	if label != "" {
+		if label[0] != '.' && label[0] != ':' {
+			s.CurrentLabel = label
+			s.errorf("DEBUG - Setting Current Label %s", s.CurrentLabel)
+		} else {
+			label = s.CurrentLabel + label
+			s.errorf("DEBUG - Making local label %s", label)
+		}
 		s.Labels[label] = s.Address
 		s.Constants[">"+label] = (s.Address & 0xFF00) >> 8
 		s.Constants["<"+label] = s.Address & 0x00FF
@@ -447,6 +455,12 @@ TRYMORE:
 	var refAdded *reference
 
 	if ref != "" {
+		if ref[0] == '.' || ref[0] == ':' {
+			// Local label
+			ref = s.CurrentLabel + ref
+			s.errorf("DEBUG - found local label reference: %s", ref)
+		}
+
 		if def, ok := s.Constants[ref]; ok {
 			num += def
 		} else if refAddr, ok := s.Labels[ref]; ok {
@@ -1268,6 +1282,8 @@ func parseOperandValue(val []byte) (num uint16, ref string, err error) {
 	}
 
 	if isLetter(val[0]) || val[0] == '<' || val[0] == '>' {
+		ref = string(val[0:end])
+	} else if (val[0] == '.' || val[0] == ':') && len(val) > 1 {
 		ref = string(val[0:end])
 	} else {
 		num, _, err = readNumber(val[0:end])

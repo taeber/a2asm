@@ -210,6 +210,28 @@ func TestParseOperandValue(t *testing.T) {
 	check(0x0A, "")
 }
 
+func TestLocalLabels(t *testing.T) {
+	out := bytes.NewBuffer(nil)
+	prg := strings.NewReader(`
+START LDX #1
+	  BEQ :DONE
+	  DEX
+	  BEQ START
+:DONE RTS
+	`)
+	_, err := Assemble(out, prg, true)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	expected := []byte("\xA2\x01\xF0\x03\xCA\xF0\xF9\x60")
+	actual := out.Bytes()
+	if !bytes.Equal(expected, actual) {
+		t.Errorf("Expected %v; got %v", expected, actual)
+	}
+}
+
 func test(t *testing.T, assembly, expected string) {
 	s := state{
 		Reader: bufio.NewReader(strings.NewReader(assembly)),
