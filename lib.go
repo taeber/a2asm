@@ -307,7 +307,11 @@ func parseLine(s *state) (err error) {
 
 	case "EQU":
 		var def uint16
-		def, _, err = parseOperandValue(line)
+		var ref string
+		def, ref, err = parseOperandValue(line)
+		if aliasedValue, ok := s.Constants[ref]; ok {
+			def = aliasedValue
+		}
 		s.Constants[label] = def
 		s.Constants[">"+label] = (def & 0xFF00) >> 8
 		s.Constants["<"+label] = def & 0x00FF

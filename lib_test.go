@@ -232,6 +232,36 @@ START LDX #1
 	}
 }
 
+func TestLabelEQULabel(t *testing.T) {
+	out := bytes.NewBuffer(nil)
+	prg := strings.NewReader(`
+LOMEM EQU $0912
+FMT   EQU LOMEM
+PTR   EQU $06
+SRC   EQU PTR
+      LDX #0
+      LDA #0
+	  STA FMT,X
+	  STA SRC,X
+	`)
+	_, err := Assemble(out, prg, true)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	expected := []byte("" +
+		"\xA2\x00" +
+		"\xA9\x00" +
+		"\x9D\x12\x09" +
+		"\x95\x06")
+
+	actual := out.Bytes()
+	if !bytes.Equal(expected, actual) {
+		t.Errorf("Expected %v; got %v", expected, actual)
+	}
+}
+
 func TestASCII(t *testing.T) {
 	out := bytes.NewBuffer(nil)
 	prg := strings.NewReader(`
