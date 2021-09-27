@@ -1,7 +1,11 @@
 a2asm - A simple 6502 assembler
 ===============================
 
-`a2asm` is written in Go and is licensed under the MIT License.
+`a2asm` is a 6502 assembler written in Go and licensed under the MIT License.
+
+As mentioned in [Juiced.GS](https://juiced.gs/index/v26/i3/?target=issue-links),
+it supports a "subset of the classic Merlin assembler syntax... sufficient to
+assemble all of the examples from Roger Wagner's _Assembly Lines_ book."
 
 Copyright 2020, Taeber Rapczak <taeber@rapczak.com>.
 
@@ -54,22 +58,24 @@ from the DSK images to the current folder then run:
 Motivation
 ----------
 
-I bought _Assembly Lines_ by Roger Wagner and enjoyed using the MERLIN
-assembler on my Apple //e to start learning 6502 assembly.
+I wanted to learn 6502 assembly on a recently acquired Apple //e. I bought
+_[Assembly Lines](https://ct6502.org/product/assembly-lines-the-complete-book/)_
+by Roger Wagner (edited by Chris Torrence) and was introduced to the Merlin
+assembler. It was great to learn with.
 
-When I decided to try and write my own program, I found it easier to use VIM on
-my Ubuntu laptop. I found [CC65][] and their CA65 assembler with its modern ideas
-on programming the 6502. I was soon lost in their documentation (which is
-pretty good). I eventually ended up switching to using C as it seemed like the
-easier path. However, after porting about 50% of the line-editor ed to the
-Apple //e, I found out that the code didn't work on the real hardware!
+When I decided to try and write my own programs, I found it easier to iterate
+using VIM and LinApple on my Ubuntu laptop. I found [CC65][] and their CA65
+assembler with its modern ideas on programming the 6502. I was soon lost in
+their documentation and eventually ended up switching to using C as it seemed
+to be the easier path. After porting about 50% of the line-editor `ed` to the
+Apple //e, however, I found out that the C code that had worked in my emulator,
+didn't work on the real hardware!
 
 Somewhere along the way I forgot that I was just trying to learn 6502 assembly
 and maybe using a "modern" assembler wasn't the appropriate tool for the job.
 
 So, I wrote this assembler. I wrote tests to ensure every program of Roger
 Wagner assembles correctly. I have not added any more features, so while it
-uses MERLIN-style syntax, it is not 100% MERLIN compatible.
+uses Merlin-style syntax, it is not 100% Merlin compatible.
 
 [CC65]: https://cc65.github.io/
-
