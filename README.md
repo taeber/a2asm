@@ -4,11 +4,13 @@ a2asm - A simple 6502 assembler
 `a2asm` is a 6502 assembler written in Go and licensed under the MIT License.
 
 As mentioned in [Juiced.GS](https://juiced.gs/index/v26/i3/?target=issue-links),
-it supports a "subset of the classic Merlin assembler syntax... sufficient to
-assemble all of the examples from Roger Wagner's _Assembly Lines_ book."
+it supports a "subset of the classic [Merlin assembler][] syntax... sufficient to
+assemble all of the examples from Roger Wagner's _[Assembly Lines][]_ book."
 
 Copyright 2020, Taeber Rapczak <taeber@rapczak.com>.
 
+[Merlin assembler]: https://en.wikipedia.org/wiki/Merlin_(assembler)
+[Assembly Lines]: https://ct6502.org/product/assembly-lines-the-complete-book/
 
 Quickstart
 ----------
@@ -59,9 +61,8 @@ Motivation
 ----------
 
 I wanted to learn 6502 assembly on a recently acquired Apple //e. I bought
-_[Assembly Lines](https://ct6502.org/product/assembly-lines-the-complete-book/)_
-by Roger Wagner (edited by Chris Torrence) and was introduced to the Merlin
-assembler. It was great to learn with.
+_[Assembly Lines][]_ by Roger Wagner (edited by Chris Torrence) and was
+introduced to the original, Merlin assembler. It was great to learn with.
 
 When I decided to try and write my own programs, I found it easier to iterate
 using VIM and LinApple on my Ubuntu laptop. I found [CC65][] and their CA65
