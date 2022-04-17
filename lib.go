@@ -37,17 +37,20 @@ func Assemble(dst io.Writer, src io.Reader, headless bool) (written uint, err er
 	err = nil
 
 	for lbl := range s.References {
-		if lbl[0] == '>' || lbl[0] == '<' {
-			num, ok := s.Constants[lbl]
-			if !ok {
+		num, ok := s.Constants[lbl]
+		if !ok {
+			if lbl[0] == '>' || lbl[0] == '<' {
 				err = s.errorf("unknown label: %s", lbl)
 				return
 			}
-
+		} else {
 			for _, ref := range s.References[lbl] {
-				s.Memory[ref.Address] += uint8(num)
+				if num <= 0xFF {
+					s.Memory[ref.Address] += uint8(num)
+				} else {
+					binary.LittleEndian.PutUint16(s.Memory[ref.Address:], num)
+				}
 			}
-
 			continue
 		}
 

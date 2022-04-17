@@ -285,6 +285,32 @@ EXIT  RTS
 	}
 }
 
+func TestJumpEqu(t *testing.T) {
+	out := bytes.NewBuffer(nil)
+	prg := strings.NewReader(`
+	ORG $800
+	JSR MAIN
+	JMP EXIT
+EXIT	EQU $3D0
+INIT	EQU $FB2F
+HOME	EQU $FC58
+MAIN	JSR INIT
+	JSR HOME
+	RTS
+	`)
+	_, err := Assemble(out, prg, true)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	expected := []byte("\x20\x06\x08\x4C\xD0\x03\x20\x2F\xFB\x20\x58\xFC\x60")
+	actual := out.Bytes()
+	if !bytes.Equal(expected, actual) {
+		t.Errorf("Expected %v; got %v", expected, actual)
+	}
+}
+
 func test(t *testing.T, assembly, expected string) {
 	s := state{
 		Reader: bufio.NewReader(strings.NewReader(assembly)),
