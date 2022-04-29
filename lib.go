@@ -194,16 +194,22 @@ func readMneumonic(line []byte) (mneumonic string, remaining []byte) {
 	return
 }
 
+// readNumber parses text for a number (decimal, hex, or binary) and returns
+// the uint16 representation of it along with the remaining text. If parsing
+// fails, an error is returned and the other returned values should be ignored.
 func readNumber(text []byte) (uint16, []byte, error) {
 	if text[0] == '$' {
 		// Read hex literal.
-		num, err := strconv.ParseUint(string(text[1:]), 16, 16)
-		if err != nil {
-			return 0, text, err
+		var i int
+		for i = 1; i < len(text); i++ {
+			if !isHex(text[i]) {
+				break
+			}
 		}
 
-		var i int
-		for i = 1; i < len(text) && isHex(text[i]); i++ {
+		num, err := strconv.ParseUint(string(text[1:i]), 16, 16)
+		if err != nil {
+			return 0, text, err
 		}
 
 		return uint16(num), text[i:], err
@@ -211,11 +217,6 @@ func readNumber(text []byte) (uint16, []byte, error) {
 
 	if text[0] == '%' {
 		// Read binary literal.
-		num, err := strconv.ParseUint(string(text[1:]), 2, 16)
-		if err != nil {
-			return 0, text, err
-		}
-
 		var i int
 		for i = 1; i < len(text); i++ {
 			if text[i] != '0' && text[i] != '1' {
@@ -223,18 +224,25 @@ func readNumber(text []byte) (uint16, []byte, error) {
 			}
 		}
 
-		return uint16(num), text[i:], err
-	}
-
-	if isDigit(text[0]) {
-		num, err := strconv.ParseUint(string(text), 10, 16)
+		num, err := strconv.ParseUint(string(text[1:i]), 2, 16)
 		if err != nil {
 			return 0, text, err
 		}
 
-		var i int
+		return uint16(num), text[i:], err
+	}
 
-		for i = 0; i < len(text) && isDigit(text[i]); i++ {
+	if isDigit(text[0]) {
+		var i int
+		for i = 0; i < len(text); i++ {
+			if !isDigit(text[i]) {
+				break
+			}
+		}
+
+		num, err := strconv.ParseUint(string(text[0:i]), 10, 16)
+		if err != nil {
+			return 0, text, err
 		}
 
 		return uint16(num), text[i:], err
@@ -247,7 +255,7 @@ func readNumber(text []byte) (uint16, []byte, error) {
 			return uint16(text[1]), text[3:], nil
 		}
 		if text[0] == '"' && text[2] == '"' {
-			// high-ASCII (high-bit on
+			// high-ASCII (high-bit on)
 			return uint16(text[1] | highASCII), text[3:], nil
 		}
 	}
@@ -304,7 +312,7 @@ func parseLine(s *state) (err error) {
 
 	switch mneumonic {
 	case "ORG":
-		s.Address, line, err = readNumber(line)
+		s.Address, _, err = readNumber(line)
 		s.Origin = s.Address
 		return
 
@@ -1313,28 +1321,43 @@ func parseOperandValue(val []byte) (num uint16, ref string, err error) {
 
 	val = val[end:]
 
-	if len(val) == 0 {
-		return
-	}
-
-	var num2 uint16
-	switch val[0] {
-	case ' ':
-	case '+':
-		num2, _, err = readNumber(val[1:])
-		if err != nil {
+	// According to the Merlin manual, the "assembler supports four arithmetic
+	// operations: +, -, /, and *." "All ... operations are done from left to
+	// right (2+3*5 would assemble as 25 and not 17)."
+	for len(val) > 0 {
+		var num2 uint16
+		switch val[0] {
+		case ' ':
+			// Assume the rest of the line is a comment.
+			return
+		case '+':
+			num2, val, err = readNumber(val[1:])
+			if err != nil {
+				return
+			}
+			num += num2
+		case '-':
+			num2, val, err = readNumber(val[1:])
+			if err != nil {
+				return
+			}
+			num -= num2
+		case '*':
+			num2, val, err = readNumber(val[1:])
+			if err != nil {
+				return
+			}
+			num *= num2
+		case '/':
+			num2, val, err = readNumber(val[1:])
+			if err != nil {
+				return
+			}
+			num /= num2
+		default:
+			err = fmt.Errorf("invalid arithmetic operator: %c", val[0])
 			return
 		}
-		num += num2
-	case '-':
-		num2, _, err = readNumber(val[1:])
-		if err != nil {
-			return
-		}
-		num -= num2
-	default:
-		err = fmt.Errorf("invalid +/- offset")
-		return
 	}
 
 	return
@@ -1345,7 +1368,7 @@ func (s *state) error(err error) error {
 		return nil
 	}
 
-	return fmt.Errorf("Line %d - %s", s.LineNumber, err.Error())
+	return fmt.Errorf("line %d - %s", s.LineNumber, err.Error())
 }
 
 func (s *state) errorf(format string, a ...interface{}) error {
