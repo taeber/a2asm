@@ -322,6 +322,8 @@ func parseLine(s *state) (err error) {
 		def, ref, err = parseOperandValue(line)
 		if aliasedValue, ok := s.Constants[ref]; ok {
 			def = aliasedValue
+		} else if aliasedValue, ok := s.Labels[ref]; ok {
+			def = aliasedValue
 		}
 		s.Constants[label] = def
 		s.Constants[">"+label] = (def & 0xFF00) >> 8

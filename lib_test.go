@@ -331,6 +331,70 @@ MAIN	LDA #MAIN+$A+2*2
 	}
 }
 
+func TestLabelAliases(t *testing.T) {
+	out := bytes.NewBuffer(nil)
+	prg := strings.NewReader(`
+				ORG $8000
+EXIT            EQU $3D0
+COUT            EQU $FDED
+CROUT           EQU $FD8E
+				JSR CROUT
+* IFNE #$01 #$01
+*   A2_1 A2_2
+A2_0            LDA #$01
+				CMP #$01
+				BNE A2_1
+				JMP A2_2
+A2_1            RTS
+* IFEQ #$01 #$01
+*   A2_4 A2_5
+A2_3            LDA #$01
+				CMP #$01
+				BEQ A2_4
+				JMP A2_5
+* COPYBB @A #"O"
+A2_4            LDA #"O"
+				JSR COUT
+* COPYBB @A #"K"
+				LDA #"K"
+				JSR COUT
+A2_5            JSR EXIT
+A2_2            EQU A2_3
+	`)
+
+	_, err := Assemble(out, prg, true)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	/*
+		20 8e fd
+		a9 01
+		c9 01
+		d0 03
+		4c 0d 80
+		60
+		a9 01
+		c9 01
+		f0 03
+		4c 20 80
+		a9 cf
+		20 ed fd
+		a9 cb
+		20 ed fd
+		20 d0 03
+	*/
+	expected := []byte(
+		"\x20\x8E\xFD\xA9\x01\xC9\x01\xD0\x03\x4C\x0D\x80\x60\xA9\x01\xC9\x01\xF0\x03\x4C\x20\x80\xA9\xCF\x20\xED\xFD\xA9\xCB\x20\xED\xFD\x20\xD0\x03")
+	//	                                           00  00  A2_2 is being set to $0000 instead of A2_3 ($080D)!
+
+	actual := out.Bytes()
+	if !bytes.Equal(expected, actual) {
+		t.Errorf("Expected %v; got %v", expected, actual)
+	}
+}
+
 func test(t *testing.T, assembly, expected string) {
 	s := state{
 		Reader: bufio.NewReader(strings.NewReader(assembly)),
