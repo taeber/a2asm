@@ -7,7 +7,7 @@ As mentioned in [Juiced.GS](https://juiced.gs/index/v26/i3/?target=issue-links),
 it supports a "subset of the classic [Merlin assembler][] syntax... sufficient to
 assemble all of the examples from Roger Wagner's _[Assembly Lines][]_ book."
 
-Copyright 2020, Taeber Rapczak <taeber@rapczak.com>.
+Copyright 2020–2022, Taeber Rapczak <taeber@rapczak.com>.
 
 [Merlin assembler]: https://en.wikipedia.org/wiki/Merlin_(assembler)
 [Assembly Lines]: https://ct6502.org/product/assembly-lines-the-complete-book/
