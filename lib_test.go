@@ -395,6 +395,34 @@ A2_2            EQU A2_3
 	}
 }
 
+func TestCurrentAddress(t *testing.T) {
+	out := bytes.NewBuffer(nil)
+	prg := strings.NewReader(`
+		ORG $8000
+MAIN	LDX #0
+		BEQ *+2+1
+		INX
+		JMP *
+	`)
+
+	_, err := Assemble(out, prg, true)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	// 8000-	A2 00   	LDX #$00
+	// 8002-	F0 01   	BEQ $8005
+	// 8004-	E8      	INX
+	// 8005-	4C 05 80	JMP $8005
+	expected := []byte("\xA2\x00\xF0\x01\xE8\x4C\x05\x80")
+
+	actual := out.Bytes()
+	if !bytes.Equal(expected, actual) {
+		t.Errorf("Expected %v; got %v", expected, actual)
+	}
+}
+
 func test(t *testing.T, assembly, expected string) {
 	s := state{
 		Reader: bufio.NewReader(strings.NewReader(assembly)),

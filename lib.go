@@ -54,21 +54,38 @@ func Assemble(dst io.Writer, src io.Reader, headless bool) (written uint, err er
 			continue
 		}
 
-		addr, ok := s.Labels[lbl]
-		if !ok {
-			err = s.errorf("unknown label: %s", lbl)
-			return
-		}
-
-		for _, ref := range s.References[lbl] {
-			pos := ref.Address
-			num := binary.LittleEndian.Uint16(s.Memory[pos:])
-			if !ref.Relative {
-				binary.LittleEndian.PutUint16(s.Memory[pos:], num+addr)
-				continue
+		if lbl != "*" {
+			addr, ok := s.Labels[lbl]
+			if !ok {
+				err = s.errorf("unknown label: %s", lbl)
+				return
 			}
 
-			s.Memory[pos] = uint8(addr - (pos + 1))
+			for _, ref := range s.References[lbl] {
+				pos := ref.Address
+				num := binary.LittleEndian.Uint16(s.Memory[pos:])
+				if !ref.Relative {
+					binary.LittleEndian.PutUint16(s.Memory[pos:], num+addr)
+					continue
+				}
+
+				s.Memory[pos] = uint8(addr - (pos + 1))
+			}
+		} else {
+			// self reference
+			for _, ref := range s.References[lbl] {
+				if ref.Relative {
+					pos := int(ref.Address)
+					addr := pos - 1
+					offset := int(s.Memory[pos]) - 1 // needed for Branch ops
+					s.Memory[pos] = uint8(addr - pos + offset)
+					continue
+				}
+				pos := ref.Address
+				addr := pos - 1
+				num := binary.LittleEndian.Uint16(s.Memory[pos:])
+				binary.LittleEndian.PutUint16(s.Memory[pos:], num+addr)
+			}
 		}
 	}
 
@@ -477,7 +494,6 @@ TRYMORE:
 		return
 	}
 
-	// TODO: *-1 meaning current address -1
 	var num uint16
 	var ref string
 	num, ref, err = parseOperandValue(value)
@@ -1314,6 +1330,8 @@ func parseOperandValue(val []byte) (num uint16, ref string, err error) {
 		ref = string(val[0:end])
 	} else if (val[0] == '.' || val[0] == ':') && len(val) > 1 {
 		ref = string(val[0:end])
+	} else if val[0] == '*' {
+		ref = string(val[0])
 	} else {
 		num, _, err = readNumber(val[0:end])
 		if err != nil {
