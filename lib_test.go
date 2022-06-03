@@ -423,6 +423,31 @@ MAIN	LDX #0
 	}
 }
 
+func TestHiLoArithmetic(t *testing.T) {
+	out := bytes.NewBuffer(nil)
+	prg := strings.NewReader(`
+		ORG $8000
+NAME	EQU $24B1
+		LDA #<NAME+$1E
+		LDX #>NAME+$1E
+	`)
+
+	_, err := Assemble(out, prg, true)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	// 8000-	A9 CF   	LDA #<NAME+$1E
+	// 8002-	A2 24   	LDX #>NAME+$1E
+	expected := []byte("\xA9\xCF\xA2\x24")
+
+	actual := out.Bytes()
+	if !bytes.Equal(expected, actual) {
+		t.Errorf("Expected %v; got %v", expected, actual)
+	}
+}
+
 func test(t *testing.T, assembly, expected string) {
 	s := state{
 		Reader: bufio.NewReader(strings.NewReader(assembly)),

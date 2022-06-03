@@ -37,13 +37,34 @@ func Assemble(dst io.Writer, src io.Reader, headless bool) (written uint, err er
 	err = nil
 
 	for lbl := range s.References {
-		num, ok := s.Constants[lbl]
-		if !ok {
-			if lbl[0] == '>' || lbl[0] == '<' {
-				err = s.errorf("unknown label: %s", lbl)
-				return
+		if lbl[0] == '<' || lbl[0] == '>' {
+			// TODO: handle self-ref #>* and #<*
+			var num uint16
+			var ok bool
+
+			num, ok = s.Constants[lbl[1:]]
+			if !ok {
+				num, ok = s.Labels[lbl[1:]]
+				if !ok {
+					err = s.errorf("unknown label: %s", lbl)
+					return
+				}
 			}
-		} else {
+			for _, ref := range s.References[lbl] {
+				value := num + uint16(s.Memory[ref.Address])
+				if lbl[0] == '>' {
+					// Produce high-byte of expression
+					s.Memory[ref.Address] = uint8((value >> 8) & 0xff)
+				} else {
+					// Produce low-byte of expression
+					s.Memory[ref.Address] = uint8((value >> 0) & 0xff)
+				}
+			}
+			continue
+		}
+
+		num, ok := s.Constants[lbl]
+		if ok {
 			for _, ref := range s.References[lbl] {
 				if num <= 0xFF {
 					s.Memory[ref.Address] += uint8(num)
@@ -320,8 +341,6 @@ func parseLine(s *state) (err error) {
 			label = s.CurrentLabel + label
 		}
 		s.Labels[label] = s.Address
-		s.Constants[">"+label] = (s.Address & 0xFF00) >> 8
-		s.Constants["<"+label] = s.Address & 0x00FF
 	}
 
 	var mneumonic string
@@ -343,8 +362,6 @@ func parseLine(s *state) (err error) {
 			def = aliasedValue
 		}
 		s.Constants[label] = def
-		s.Constants[">"+label] = (def & 0xFF00) >> 8
-		s.Constants["<"+label] = def & 0x00FF
 		return
 
 	case "CHK":
