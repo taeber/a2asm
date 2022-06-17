@@ -1336,10 +1336,20 @@ func parseOperandValue(val []byte) (num uint16, ref string, err error) {
 	}
 
 	end := len(val)
-	for i, ch := range val {
-		if ch == '-' || ch == '+' || ch == ' ' {
-			end = i
-			break
+	isLiteral := false
+	if end >= 3 {
+		isLiteral = (val[0] == '"' && val[2] == '"') || (val[0] == '\'' && val[2] == '\'')
+		if isLiteral {
+			end = 3
+		}
+	}
+
+	if !isLiteral {
+		for i, ch := range val {
+			if ch == '-' || ch == '+' || ch == ' ' {
+				end = i
+				break
+			}
 		}
 	}
 

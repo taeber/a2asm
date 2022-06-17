@@ -448,6 +448,28 @@ NAME	EQU $24B1
 	}
 }
 
+func TestHiAsciiDash(t *testing.T) {
+	out := bytes.NewBuffer(nil)
+	prg := strings.NewReader(`
+		ORG $8000
+		LDA #"-"
+	`)
+
+	_, err := Assemble(out, prg, true)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	// 8000-	A9 AD   	LDA #"-"
+	expected := []byte("\xA9\xAD")
+
+	actual := out.Bytes()
+	if !bytes.Equal(expected, actual) {
+		t.Errorf("Expected %v; got %v", expected, actual)
+	}
+}
+
 func test(t *testing.T, assembly, expected string) {
 	s := state{
 		Reader: bufio.NewReader(strings.NewReader(assembly)),
