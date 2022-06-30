@@ -36,6 +36,25 @@ START JSR BELL
 	}
 }
 
+func TestPrg1AltEQU(t *testing.T) {
+	out := bytes.NewBuffer(nil)
+	prg := strings.NewReader(`
+      ORG $300
+BELL  = $FBDD
+*
+	  LDA #>START
+START JSR BELL
+      RTS
+	  LDA #>START
+	`)
+	expected := []byte("\xA9\x03\x20\xDD\xFB\x60\xA9\x03")
+	Assemble(out, prg, true)
+	actual := out.Bytes()
+	if !bytes.Equal(expected, actual) {
+		t.Errorf("Expected %v; got %v", expected, actual)
+	}
+}
+
 func TestPrg2(t *testing.T) {
 	out := bytes.NewBuffer(nil)
 	prg := strings.NewReader(`

@@ -214,13 +214,16 @@ func readMneumonic(line []byte) (mneumonic string, remaining []byte) {
 		}
 	}
 
-	if i+3 > len(line) {
+	if line[i] == '=' {
+		mneumonic = "EQU"
+		i = i + 1
+	} else if i+3 > len(line) {
 		return
+	} else {
+		mneumonic = string(line[i : i+3])
+		mneumonic = strings.ToUpper(mneumonic)
+		i = i + 3
 	}
-
-	mneumonic = string(line[i : i+3])
-	mneumonic = strings.ToUpper(mneumonic)
-	i = i + 3
 
 	if i < len(line) {
 		if line[i] == ' ' || line[i] == '\t' {
