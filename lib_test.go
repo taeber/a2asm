@@ -16,6 +16,7 @@ import (
 //  6. Indexed  ,X
 //  7. Indirect Indexed ($HH),Y
 //  8. Indexed Indirect ($HH,X)
+//  9. Accumulator (ex: ROL A) (ex: ROL)
 
 func TestPrg1(t *testing.T) {
 	out := bytes.NewBuffer(nil)
@@ -144,6 +145,15 @@ func TestJSR(t *testing.T) {
 func TestLDA(t *testing.T) {
 	test(t, " LDA #$12", "\xA9\x12")
 	test(t, " LDA #12", "\xA9\x0C")
+}
+
+func TestAccumulatorMode(t *testing.T) {
+	test(t, " ROL $44", "\x26\x44")
+	test(t, " ROL A", "\x2A")
+	test(t, " ASL", "\x0A")
+	test(t, " ROL", "\x2A")
+	test(t, " LSR", "\x4A")
+	test(t, " ROR", "\x6A")
 }
 
 func TestRTS(t *testing.T) {
