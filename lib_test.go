@@ -151,7 +151,7 @@ func TestAccumulatorMode(t *testing.T) {
 	test(t, " ROL $44", "\x26\x44")
 	test(t, " ROL A", "\x2A")
 	test(t, " ASL", "\x0A")
-	test(t, " ROL", "\x2A")
+	test(t, " ROL ;With a comment", "\x2A")
 	test(t, " LSR", "\x4A")
 	test(t, " ROR", "\x6A")
 }

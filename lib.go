@@ -1255,7 +1255,7 @@ TRYBRANCH:
 func parseOperand(text []byte) (mode addressingMode, val []byte, err error) {
 	var i int
 
-	if len(text) == 0 || text[0] == ' ' || string(text) == "A" {
+	if len(text) == 0 || text[0] == ' ' || text[0] == ';' || string(text) == "A" {
 		mode = implied
 		return
 	}
